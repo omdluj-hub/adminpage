@@ -1,5 +1,13 @@
-import NextAuth from 'next-auth';
+import NextAuth, { Session, TokenSet } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+
+interface ExtendedToken extends TokenSet {
+  accessToken?: string;
+}
+
+interface ExtendedSession extends Session {
+  accessToken?: string;
+}
 
 const handler = NextAuth({
   providers: [
@@ -22,9 +30,10 @@ const handler = NextAuth({
       }
       return token;
     },
-    async session({ session, token }: any) {
-      session.accessToken = token.accessToken;
-      return session;
+    async session({ session, token }) {
+      const extendedSession = session as ExtendedSession;
+      extendedSession.accessToken = (token as ExtendedToken).accessToken;
+      return extendedSession;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
