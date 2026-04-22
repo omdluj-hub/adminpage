@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -19,10 +19,13 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, Globe, Search, RefreshCw } from 'lucide-react';
+import { BarChart3, Search, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SiteVisit } from '@/lib/types';
+
+// 명시적으로 관리할 사이트 목록 (데이터가 없어도 메뉴에 보임)
+const PREDEFINED_SITES = ['ipwon', 'autohtml', 'board', 'viral', 'skin', 'event'];
 
 export default function TrafficPage() {
   const [visits, setVisits] = useState<SiteVisit[]>([]);
@@ -31,52 +34,46 @@ export default function TrafficPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleSiteChange = (value: string | null) => {
-    setSelectedSite(value || 'all');
-  };
-
-  // 데이터 가져오기 (Client-side fetch)
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-      // lib/stats의 getRecentVisits는 서버 사이드용이므로 API를 통해 가져오거나 
-      // 현재는 간단하게 로직을 작성합니다.
-      // (참고: 기존 stats.ts를 활용하는 별도 API를 만들거나 직접 연동)
       const response = await fetch('/api/stats?limit=100');
       const data = await response.json();
-      setVisits(data);
-      setFilteredVisits(data);
+      if (Array.isArray(data)) {
+        setVisits(data);
+      }
     } catch (err) {
       console.error('Failed to fetch logs:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [fetchLogs]);
 
-  // 필터링 로직
   useEffect(() => {
     let result = visits;
-    
     if (selectedSite !== 'all') {
       result = result.filter(v => v.site_id === selectedSite);
     }
-    
     if (searchTerm) {
       result = result.filter(v => 
         v.ip_address.includes(searchTerm) || 
         v.visited_path.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
     setFilteredVisits(result);
   }, [selectedSite, searchTerm, visits]);
 
-  // 유니크한 사이트 ID 목록 추출
-  const siteIds = Array.from(new Set(visits.map(v => v.site_id)));
+  const handleSiteChange = (value: string | null) => {
+    setSelectedSite(value || 'all');
+  };
+
+  // 데이터 기반 사이트 ID 목록 + 미리 정의된 목록 합치기 (중복 제거)
+  const dynamicSiteIds = Array.from(new Set(visits.map(v => v.site_id)));
+  const allSiteIds = Array.from(new Set([...PREDEFINED_SITES, ...dynamicSiteIds])).sort();
 
   return (
     <div className="space-y-6">
@@ -112,7 +109,7 @@ export default function TrafficPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">모든 사이트</SelectItem>
-              {siteIds.map(id => (
+              {allSiteIds.map(id => (
                 <SelectItem key={id} value={id}>{id}</SelectItem>
               ))}
             </SelectContent>
@@ -120,11 +117,15 @@ export default function TrafficPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="all" onValueChange={(val) => setSelectedSite(val)}>
-        <TabsList>
-          <TabsTrigger value="all">전체</TabsTrigger>
-          {siteIds.map(id => (
-            <TabsTrigger key={id} value={id}>{id}</TabsTrigger>
+      <Tabs value={selectedSite} onValueChange={handleSiteChange}>
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0">
+          <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            전체
+          </TabsTrigger>
+          {allSiteIds.map(id => (
+            <TabsTrigger key={id} value={id} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              {id}
+            </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
@@ -159,7 +160,9 @@ export default function TrafficPage() {
               ) : filteredVisits.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
-                    해당 조건에 맞는 방문 기록이 없습니다.
+                    {selectedSite === 'all' 
+                      ? '수집된 방문 기록이 없습니다. 트래커 설정을 확인해 주세요.' 
+                      : `${selectedSite} 사이트의 방문 기록이 아직 없습니다.`}
                   </TableCell>
                 </TableRow>
               ) : (
