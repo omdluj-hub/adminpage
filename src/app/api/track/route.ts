@@ -4,11 +4,15 @@ import { isbot } from 'isbot';
 import { UAParser } from 'ua-parser-js';
 
 export async function POST(req: NextRequest) {
+  console.log('--- Tracking Request Received ---');
   try {
     const body = await req.json();
+    console.log('Payload:', JSON.stringify(body));
+
     const { site_id, visited_path, referrer } = body;
 
     if (!site_id || !visited_path) {
+      console.warn('Missing required fields:', { site_id, visited_path });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -24,18 +28,13 @@ export async function POST(req: NextRequest) {
     if (isBotVisit) {
       const parser = new UAParser(userAgent);
       const browser = parser.getBrowser();
-      const device = parser.getDevice();
-      botName = browser.name || device.model || 'Unknown Bot';
-      
-      // Additional bot name refinement for common AI bots
+      botName = browser.name || 'Unknown Bot';
       if (userAgent.includes('ChatGPT')) botName = 'ChatGPT-User';
-      if (userAgent.includes('Googlebot')) botName = 'Googlebot';
-      if (userAgent.includes('bingbot')) botName = 'Bingbot';
-      if (userAgent.includes('ClaudeBot')) botName = 'ClaudeBot';
     }
 
     const supabase = getServiceSupabase();
     
+    console.log('Inserting into Supabase...');
     const { error } = await supabase
       .from('site_visits')
       .insert({
@@ -49,18 +48,19 @@ export async function POST(req: NextRequest) {
       });
 
     if (error) {
-      console.error('Error inserting visit:', error);
-      return NextResponse.json({ error: 'Failed to log visit' }, { status: 500 });
+      console.error('Supabase Insert Error:', error);
+      return NextResponse.json({ error: 'Failed to log visit', details: error.message }, { status: 500 });
     }
 
+    console.log('Successfully logged visit for:', site_id);
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('Tracking API error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    console.error('Tracking API Crash:', err.message);
+    return NextResponse.json({ error: 'Internal server error', details: err.message }, { status: 500 });
   }
 }
 
-// OPTIONS for CORS (External sites will call this)
+// OPTIONS for CORS (Crucial for cross-domain requests)
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
