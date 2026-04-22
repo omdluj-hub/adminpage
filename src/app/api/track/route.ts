@@ -9,10 +9,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('Payload:', JSON.stringify(body));
 
-    const { site_id, visited_path, referrer } = body;
+    const { site_id, visited_path, path, referrer } = body;
+    const actualPath = visited_path || path;
 
-    if (!site_id || !visited_path) {
-      console.warn('Missing required fields:', { site_id, visited_path });
+    if (!site_id || !actualPath) {
+      console.warn('Missing required fields:', { site_id, visited_path, path });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
         user_agent: userAgent,
         is_bot: isBotVisit,
         bot_name: botName,
-        visited_path
+        visited_path: actualPath
       });
 
     if (error) {
