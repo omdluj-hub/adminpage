@@ -31,6 +31,10 @@ export default function TrafficPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  const handleSiteChange = (value: string | null) => {
+    setSelectedSite(value || 'all');
+  };
+
   // 데이터 가져오기 (Client-side fetch)
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -102,7 +106,7 @@ export default function TrafficPage() {
         
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium whitespace-nowrap">사이트별 보기:</span>
-          <Select value={selectedSite} onValueChange={setSelectedSite}>
+          <Select value={selectedSite} onValueChange={handleSiteChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="모든 사이트" />
             </SelectTrigger>
