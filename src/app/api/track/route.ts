@@ -24,33 +24,33 @@ export async function POST(req: NextRequest) {
     
     // Bot detection
     const isBotVisit = isbot(userAgent);
-    let botName = null;
+    let bot_name = null;
 
     if (isBotVisit) {
       const parser = new UAParser(userAgent);
       const browser = parser.getBrowser();
-      botName = browser.name || 'Unknown Bot';
-      if (userAgent.includes('ChatGPT')) botName = 'ChatGPT-User';
+      bot_name = browser.name || 'Unknown Bot';
+      if (userAgent.includes('ChatGPT')) bot_name = 'ChatGPT-User';
     }
 
     const supabase = getServiceSupabase();
     
-    console.log('Inserting into Supabase...');
+    console.log('Inserting into Supabase with safe values...');
     const { error } = await supabase
       .from('site_visits')
       .insert({
-        site_id,
-        ip_address: ip,
-        referrer: referrer || 'direct',
-        user_agent: userAgent,
-        is_bot: isBotVisit,
-        bot_name: botName,
-        visited_path: actualPath
+        site_id: String(site_id).substring(0, 50),
+        ip_address: String(ip).substring(0, 50),
+        referrer: String(referrer || 'direct').substring(0, 255),
+        user_agent: String(userAgent).substring(0, 500),
+        is_bot: !!isBotVisit,
+        bot_name: bot_name ? String(bot_name).substring(0, 100) : null,
+        visited_path: String(actualPath).substring(0, 255)
       });
 
     if (error) {
-      console.error('Supabase Insert Error:', error);
-      return NextResponse.json({ error: 'Failed to log visit', details: error.message }, { status: 500 });
+      console.error('Supabase Error Full Object:', JSON.stringify(error));
+      return NextResponse.json({ error: 'Failed to log visit', details: error }, { status: 500 });
     }
 
     console.log('Successfully logged visit for:', site_id);
