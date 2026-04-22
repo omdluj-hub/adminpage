@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
     }
 
     const userAgent = req.headers.get('user-agent') || '';
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+               req.headers.get('x-real-ip') || 
+               'unknown';
     
     // Bot detection
     const isBotVisit = isbot(userAgent);
