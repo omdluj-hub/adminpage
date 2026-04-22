@@ -7,12 +7,14 @@ import {
   Users, 
   BarChart3, 
   Stethoscope, 
-  Settings
+  Settings,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { name: '대시보드', href: '/', icon: LayoutDashboard },
+  { name: '메일함', href: '/mail', icon: Mail },
   { name: '방문자 로그', href: '/traffic', icon: BarChart3 },
   { name: '상담 신청', href: '/consultations', icon: Users },
   { name: '비대면 차트', href: '/charts', icon: Stethoscope },

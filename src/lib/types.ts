@@ -28,3 +28,14 @@ export interface TelemedicineChart {
   status: 'pending' | 'treated';
   created_at: string;
 }
+
+export interface EmailMessage {
+  id: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  snippet: string;
+  date: string;
+  isRead: boolean;
+  body?: string;
+}
